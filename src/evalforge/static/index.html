@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="EvalForge agent reliability control tower" />
+    <title>EvalForge · Agent Release Control Tower</title>
+    <link rel="stylesheet" href="/assets/styles.css" />
+  </head>
+  <body>
+    <div class="ambient ambient-one"></div>
+    <div class="ambient ambient-two"></div>
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="EvalForge home">
+        <span class="brand-mark" aria-hidden="true">EF</span>
+        <span><strong>EvalForge</strong><small>Agent reliability control tower</small></span>
+      </a>
+      <div class="header-actions">
+        <span id="auditStatus" class="pill neutral"><span class="status-dot"></span> Evidence pending</span>
+        <a class="ghost-button" href="/docs">API reference</a>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div>
+          <p class="eyebrow">EVIDENCE-DRIVEN RELEASE ENGINEERING</p>
+          <h1>Ship agent changes<br /><span>without guessing.</span></h1>
+          <p class="lede">
+            Replay production scenarios, expose regressions, and enforce quality, safety,
+            latency, and cost budgets before a candidate reaches users.
+          </p>
+        </div>
+        <div class="control-card">
+          <label for="apiKey">Local API key</label>
+          <div class="key-row">
+            <input id="apiKey" type="password" value="local-development-key" autocomplete="off" />
+            <button id="runDemo" class="primary-button">Run canary evaluation</button>
+          </div>
+          <p id="runMessage" class="microcopy">The demo runs 40 matched scenarios locally. No paid model API is required.</p>
+        </div>
+      </section>
+
+      <section class="pipeline" aria-label="Evaluation pipeline">
+        <div><span>01</span><strong>Replay</strong><small>Production scenarios</small></div>
+        <i>→</i>
+        <div><span>02</span><strong>Grade</strong><small>Quality + safety</small></div>
+        <i>→</i>
+        <div><span>03</span><strong>Compare</strong><small>Paired confidence</small></div>
+        <i>→</i>
+        <div><span>04</span><strong>Gate</strong><small>Promote or block</small></div>
+      </section>
+
+      <section class="kpi-grid" aria-label="Candidate key metrics">
+        <article class="kpi-card">
+          <span>Task success</span><strong id="successRate">—</strong><small id="successDelta">Run an evaluation</small>
+        </article>
+        <article class="kpi-card">
+          <span>Quality score</span><strong id="qualityScore">—</strong><small id="scoreDelta">Paired delta pending</small>
+        </article>
+        <article class="kpi-card">
+          <span>p95 latency</span><strong id="latency">—</strong><small>Release SLO · 1,500 ms</small>
+        </article>
+        <article class="kpi-card">
+          <span>Mean cost</span><strong id="cost">—</strong><small>Per agent execution</small>
+        </article>
+      </section>
+
+      <section class="main-grid">
+        <article class="panel decision-panel">
+          <div class="panel-heading">
+            <div><p class="eyebrow">RELEASE DECISION</p><h2>Canary gate</h2></div>
+            <span id="decisionBadge" class="decision-badge neutral">Not evaluated</span>
+          </div>
+          <div id="decisionCallout" class="decision-callout">
+            Run the evaluation to compare the candidate against the current production baseline.
+          </div>
+          <div id="checks" class="checks"></div>
+        </article>
+
+        <article class="panel comparison-panel">
+          <div class="panel-heading"><div><p class="eyebrow">PAIRED EXPERIMENT</p><h2>Baseline vs candidate</h2></div></div>
+          <div class="legend"><span><i class="baseline"></i>Baseline</span><span><i class="candidate"></i>Candidate</span></div>
+          <div class="bar-group">
+            <div class="bar-label"><span>Task success</span><strong id="successCompare">—</strong></div>
+            <div class="bars"><div id="baselineSuccessBar" class="bar baseline"></div><div id="candidateSuccessBar" class="bar candidate"></div></div>
+          </div>
+          <div class="bar-group">
+            <div class="bar-label"><span>Quality score</span><strong id="scoreCompare">—</strong></div>
+            <div class="bars"><div id="baselineScoreBar" class="bar baseline"></div><div id="candidateScoreBar" class="bar candidate"></div></div>
+          </div>
+          <div class="confidence">
+            <span>95% score-delta interval</span><strong id="confidenceInterval">—</strong>
+          </div>
+        </article>
+      </section>
+
+      <section class="panel trace-panel">
+        <div class="panel-heading">
+          <div><p class="eyebrow">TRACE INTELLIGENCE</p><h2>Latest replay evidence</h2></div>
+          <span id="traceCount" class="pill neutral">0 traces</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Scenario</th><th>Variant</th><th>Model</th><th>Tool path</th><th>Latency</th><th>Cost</th><th>Policy</th></tr></thead>
+            <tbody id="traceRows"><tr><td colspan="7" class="empty">No evidence yet. Run the canary evaluation.</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <footer><span>EvalForge v1.0</span><span>Deterministic demo · Provider-neutral core · Local-first evidence</span></footer>
+    <script src="/assets/app.js" defer></script>
+  </body>
+</html>

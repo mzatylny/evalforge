@@ -1,0 +1,71 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "evalforge-control-tower"
+version = "1.0.0"
+description = "Evidence-driven release engineering for production AI agents"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Mateusz Marek Zatylny" }]
+keywords = ["ai-engineering", "llm-evaluation", "agents", "observability", "release-engineering"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+]
+dependencies = [
+  "fastapi>=0.140,<1.0",
+  "pydantic>=2.12,<3.0",
+  "uvicorn[standard]>=0.40,<1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "bandit[toml]>=1.9,<2.0",
+  "httpx>=0.28,<1.0",
+  "pytest>=9.0,<10.0",
+  "pytest-cov>=7.0,<8.0",
+  "ruff>=0.16,<1.0",
+]
+
+[project.scripts]
+evalforge = "evalforge.cli:main"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+evalforge = ["static/*.html", "static/*.css", "static/*.js"]
+
+[tool.pytest.ini_options]
+addopts = "-ra --strict-config --strict-markers"
+testpaths = ["tests"]
+
+[tool.coverage.run]
+branch = true
+source = ["evalforge"]
+
+[tool.coverage.report]
+fail_under = 90
+show_missing = true
+skip_covered = true
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "C4", "PIE", "SIM", "RUF"]
+
+[tool.bandit]
+exclude_dirs = ["tests"]
+skips = ["B101"]

@@ -1,0 +1,20 @@
+services:
+  evalforge:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      EVALFORGE_ENV: production
+      EVALFORGE_API_KEYS: portfolio:replace-with-a-long-random-secret
+    volumes:
+      - evalforge-data:/data
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+volumes:
+  evalforge-data:
