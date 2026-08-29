@@ -124,8 +124,9 @@ src/evalforge/
 make check
 ```
 
-The pipeline enforces formatting and linting, branch-aware coverage of at least 90%, Bandit,
-dependency auditing, CodeQL, and a reproducible container build.
+The pipeline tests Python 3.11–3.13 and enforces formatting, linting, static type analysis,
+branch-aware coverage of at least 90%, Bandit, dependency auditing, extended CodeQL queries,
+and a reproducible container build.
 
 ## Scope
 
