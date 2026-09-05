@@ -72,3 +72,73 @@ def test_persistent_database_creates_parent(tmp_path, scenario: Scenario) -> Non
     reopened = Storage(str(database))
     assert reopened.get_scenario("tenant", scenario.id) == scenario
     reopened.close()
+
+
+def test_scenario_contract_survives_conflict_retry_and_restart(tmp_path, scenario, perfect_trace):
+    import hashlib
+    import json
+    from dataclasses import replace
+
+    import pytest
+
+    from evalforge.scoring import Evaluator
+    from evalforge.storage import ScenarioConflictError
+
+    path = str(tmp_path / "immutable.db")
+    storage = Storage(path)
+    storage.upsert_scenario("tenant-a", scenario)
+    storage.add_trace(perfect_trace)
+    original_score = Evaluator().evaluate(perfect_trace, scenario)
+    storage.upsert_scenario("tenant-a", scenario)
+    before = storage.counts("tenant-a")
+    with pytest.raises(ScenarioConflictError):
+        storage.upsert_scenario("tenant-a", replace(scenario, expected_terms=("changed",)))
+    assert storage.counts("tenant-a") == before
+    # Independent tenant and explicit new version remain writable.
+    storage.upsert_scenario("tenant-b", replace(scenario, expected_terms=("changed",)))
+    storage.upsert_scenario("tenant-a", replace(scenario, id=scenario.id + "-v2"))
+    row = storage._connection.execute(
+        "SELECT payload FROM audit_events WHERE action = 'scenario.created' ORDER BY sequence"
+    ).fetchone()
+    snapshot = json.loads(row["payload"])
+    definition = json.dumps(snapshot["scenario"], sort_keys=True, separators=(",", ":"))
+    assert snapshot["definition_sha256"] == hashlib.sha256(definition.encode()).hexdigest()
+    storage.close()
+    storage = Storage(path)
+    assert storage.get_scenario("tenant-a", scenario.id) == scenario
+    assert (
+        Evaluator().evaluate(
+            storage.get_trace("tenant-a", perfect_trace.id),
+            storage.get_scenario("tenant-a", scenario.id),
+        )
+        == original_score
+    )
+    assert storage.verify_audit_chain("tenant-a")
+    storage.close()
+
+
+def test_two_connections_cannot_replace_a_scenario(tmp_path, scenario):
+    from concurrent.futures import ThreadPoolExecutor
+    from dataclasses import replace
+
+    from evalforge.storage import ScenarioConflictError
+
+    path = str(tmp_path / "concurrent.db")
+    stores = [Storage(path), Storage(path)]
+    definitions = [scenario, replace(scenario, prompt="A conflicting contract")]
+
+    def register(index):
+        try:
+            stores[index].upsert_scenario("tenant", definitions[index])
+            return True
+        except ScenarioConflictError:
+            return False
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(register, range(2)))
+    assert sorted(results) == [False, True]
+    assert stores[0].get_scenario("tenant", scenario.id) == definitions[results.index(True)]
+    assert stores[0].counts("tenant")["audit_events"] == 1
+    assert stores[0].verify_audit_chain("tenant")
+    for storage in stores:
+        storage.close()

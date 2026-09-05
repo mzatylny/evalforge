@@ -38,7 +38,9 @@ replaceable without changing release semantics.
 
 1. API authentication maps a high-entropy key to exactly one tenant. Client input cannot override
    tenant scope.
-2. A scenario is versioned externally by its stable identifier and metadata.
+2. A scenario identifier is immutable within its tenant. Changed definitions require a new
+   versioned ID; identical submissions are idempotent. Creation records the full definition
+   and its SHA-256 digest in the audit chain so traces retain their original contract.
 3. A runner emits a normalized trace. The evaluator never needs provider-specific response types.
 4. Baseline and candidate results are matched by scenario identifier. Unmatched samples are not
    used for paired inference.
@@ -59,7 +61,7 @@ security, and wrap experiment plus decision persistence in a serializable transa
 - Persist full spans in object storage; keep searchable trace summaries in PostgreSQL.
 - Export counters and histograms to OpenTelemetry/Prometheus infrastructure.
 - Sign release decisions with a workload identity and verify them in the deployment admission path.
-- Add a scenario registry with immutable versions and reviewer approval metadata.
+- Add scenario lineage and reviewer approval metadata across immutable version IDs.
 
 ## Failure handling
 

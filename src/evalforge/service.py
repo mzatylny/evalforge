@@ -77,8 +77,10 @@ class EvalForgeService:
         traces: list[AgentTrace] = []
         baseline_results: list[EvaluationResult] = []
         candidate_results: list[EvaluationResult] = []
-        for index, scenario in enumerate(scenarios, start=1):
+        # Register all definitions before producing evidence for this run.
+        for scenario in scenarios:
             self.storage.upsert_scenario(tenant_id, scenario)
+        for index, scenario in enumerate(scenarios, start=1):
             baseline_trace = self.runner.run(tenant_id, scenario, baseline, index)
             candidate_trace = self.runner.run(tenant_id, scenario, candidate, index)
             for trace in (baseline_trace, candidate_trace):
