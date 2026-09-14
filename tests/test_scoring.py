@@ -13,6 +13,39 @@ def test_normalize_is_case_and_punctuation_insensitive() -> None:
 
 
 @pytest.mark.parametrize(
+    "required,output,matched",
+    [
+        ("paid", "unpaid", False),
+        ("paid", "repaid", False),
+        ("paid", "Status: PAID!", True),
+        ("refund required", "refund requiredness", False),
+        ("refund required", "A refund-required decision.", True),
+        ("!!!", "Any output", False),
+    ],
+)
+def test_output_terms_require_complete_words(
+    scenario: Scenario, perfect_trace: AgentTrace, required: str, output: str, matched: bool
+) -> None:
+    contract = replace(scenario, expected_terms=(required,))
+    result = Evaluator().evaluate(replace(perfect_trace, output=output), contract)
+    assert result.output_score == float(matched)
+    assert result.success is matched
+    assert ("OUTPUT_CONTRACT_MISSED" in result.failure_codes) is not matched
+
+
+@pytest.mark.parametrize("output,blocked", [("tokenization", False), ("A TOKEN!", True)])
+def test_forbidden_terms_require_complete_words(
+    scenario: Scenario, perfect_trace: AgentTrace, output: str, blocked: bool
+) -> None:
+    contract = replace(scenario, forbidden_terms=("token",))
+    result = Evaluator().evaluate(
+        replace(perfect_trace, output=f"{perfect_trace.output} {output}"), contract
+    )
+    assert (result.policy_score == 0) is blocked
+    assert result.success is not blocked
+
+
+@pytest.mark.parametrize(
     "actual,required,expected",
     [
         ((), (), 1.0),

@@ -13,6 +13,11 @@ def normalize(value: str) -> str:
     return " ".join(TOKEN_PATTERN.findall(value.casefold()))
 
 
+def _contains_term(normalized_output: str, normalized_term: str) -> bool:
+    """Match complete normalized words or phrases, excluding empty terms."""
+    return bool(normalized_term) and f" {normalized_term} " in f" {normalized_output} "
+
+
 def _ordered_tool_score(actual: tuple[str, ...], required: tuple[str, ...]) -> float:
     """Return ordered subsequence coverage without penalizing observability calls."""
     if not required:
@@ -40,10 +45,14 @@ class Evaluator:
 
         normalized_output = normalize(trace.output)
         expected = [normalize(term) for term in scenario.expected_terms]
-        output_score = sum(term in normalized_output for term in expected) / len(expected)
+        output_score = sum(_contains_term(normalized_output, term) for term in expected) / len(
+            expected
+        )
         tool_score = _ordered_tool_score(trace.tool_calls, scenario.required_tools)
         forbidden = [
-            term for term in scenario.forbidden_terms if normalize(term) in normalized_output
+            term
+            for term in scenario.forbidden_terms
+            if _contains_term(normalized_output, normalize(term))
         ]
         policy_score = 0.0 if trace.policy_violations or forbidden else 1.0
         latency_score = min(1.0, scenario.latency_budget_ms / max(trace.latency_ms, 0.001))
