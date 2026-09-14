@@ -16,7 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from .config import Settings
 from .models import AgentTrace, Scenario, new_id
 from .service import EvalForgeService
-from .storage import Storage
+from .storage import ScenarioConflictError, Storage
 
 
 class ScenarioRequest(BaseModel):
@@ -129,7 +129,10 @@ def create_app(settings: Settings | None = None, storage: Storage | None = None)
             critical=payload.critical,
             metadata=payload.metadata,
         )
-        runtime_storage.upsert_scenario(tenant, scenario)
+        try:
+            runtime_storage.upsert_scenario(tenant, scenario)
+        except ScenarioConflictError as exc:
+            raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
         return scenario.to_dict()
 
     @app.get("/api/v1/scenarios")
@@ -168,7 +171,10 @@ def create_app(settings: Settings | None = None, storage: Storage | None = None)
 
     @app.post("/api/v1/experiments/demo", status_code=status.HTTP_201_CREATED)
     async def run_demo(tenant: Tenant) -> dict[str, Any]:
-        outcome = service.run_demo(tenant)
+        try:
+            outcome = service.run_demo(tenant)
+        except ScenarioConflictError as exc:
+            raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
         return {"experiment": outcome.report.to_dict(), "decision": outcome.decision.to_dict()}
 
     @app.get("/api/v1/dashboard")

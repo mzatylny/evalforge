@@ -79,6 +79,12 @@ evalforge serve
 ```
 
 Create a versioned scenario, ingest agent traces, and query release evidence through `/api/v1`.
+
+Scenario IDs are immutable within a tenant. Resubmitting an identical definition is safe;
+changing any field under the same ID returns HTTP 409. Use a new ID (for example,
+`refund-v2`) for a revised contract. Earlier traces continue to reference the original
+definition. This prevents future overwrites; it cannot recover definitions overwritten
+before upgrading. The built-in demo also refuses conflicting scenario IDs.
 Interactive OpenAPI documentation is available at `/docs` in development. The API never accepts a
 tenant identifier from a client; tenant scope is derived from the authenticated key.
 

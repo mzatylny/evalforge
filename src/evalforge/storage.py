@@ -25,6 +25,10 @@ def _canonical(value: Any) -> str:
     return json.dumps(value, sort_keys=True, separators=(",", ":"), default=str)
 
 
+class ScenarioConflictError(ValueError):
+    """A stable scenario ID cannot be assigned a different evaluation contract."""
+
+
 class Storage:
     """Small control-plane store with explicit tenant predicates on every read."""
 
@@ -135,15 +139,36 @@ class Storage:
         )
 
     def upsert_scenario(self, tenant_id: str, scenario: Scenario) -> None:
+        """Register an immutable scenario; identical retries are idempotent."""
+        payload = _canonical(scenario.to_dict())
         with self._lock, self._connection:
-            self._connection.execute(
+            inserted = self._connection.execute(
                 """INSERT INTO scenarios (tenant_id, id, payload, updated_at)
                    VALUES (?, ?, ?, ?)
                    ON CONFLICT (tenant_id, id)
-                   DO UPDATE SET payload = excluded.payload, updated_at = excluded.updated_at""",
-                (tenant_id, scenario.id, _canonical(scenario.to_dict()), utc_now()),
+                   DO NOTHING""",
+                (tenant_id, scenario.id, payload, utc_now()),
             )
-            self._append_audit(tenant_id, "scenario.upserted", "scenario", scenario.id, {})
+            if inserted.rowcount == 0:
+                existing = self._connection.execute(
+                    "SELECT payload FROM scenarios WHERE tenant_id = ? AND id = ?",
+                    (tenant_id, scenario.id),
+                ).fetchone()
+                if json.loads(existing["payload"]) != json.loads(payload):
+                    raise ScenarioConflictError(
+                        "scenario ID already has a different definition; use a new versioned ID"
+                    )
+                return
+            self._append_audit(
+                tenant_id,
+                "scenario.created",
+                "scenario",
+                scenario.id,
+                {
+                    "scenario": scenario.to_dict(),
+                    "definition_sha256": hashlib.sha256(payload.encode()).hexdigest(),
+                },
+            )
 
     def add_trace(self, trace: AgentTrace) -> None:
         with self._lock, self._connection:

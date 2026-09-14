@@ -134,3 +134,32 @@ def test_docs_are_disabled_in_production() -> None:
     client, storage = client_for(environment="production")
     assert client.get("/docs").status_code == 404
     storage.close()
+
+
+def test_changed_scenario_returns_conflict_without_mutation():
+    client, storage = client_for()
+    payload = scenario_payload()
+    original = client.post("/api/v1/scenarios", headers=HEADERS, json=payload)
+    assert client.post("/api/v1/scenarios", headers=HEADERS, json=payload).status_code == 201
+    payload["expected_terms"] = ["changed"]
+    conflict = client.post("/api/v1/scenarios", headers=HEADERS, json=payload)
+    assert conflict.status_code == 409
+    assert "new versioned ID" in conflict.json()["detail"]
+    assert client.get("/api/v1/scenarios", headers=HEADERS).json() == [original.json()]
+    assert storage.counts("tenant-a")["audit_events"] == 1
+    storage.close()
+
+
+def test_demo_conflict_preserves_scenario_and_produces_no_traces():
+    from dataclasses import replace
+
+    from evalforge.service import demo_scenarios
+
+    client, storage = client_for()
+    custom = replace(demo_scenarios()[-1], prompt="My existing scenario contract")
+    storage.upsert_scenario("tenant-a", custom)
+    response = client.post("/api/v1/experiments/demo", headers=HEADERS)
+    assert response.status_code == 409
+    assert storage.get_scenario("tenant-a", custom.id) == custom
+    assert storage.counts("tenant-a")["traces"] == 0
+    storage.close()
