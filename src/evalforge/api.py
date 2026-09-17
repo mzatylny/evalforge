@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hmac
+from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated, Any
@@ -70,7 +71,7 @@ def create_app(settings: Settings | None = None, storage: Storage | None = None)
     service = EvalForgeService(runtime_storage)
 
     @asynccontextmanager
-    async def lifespan(_: FastAPI):
+    async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         yield
         if storage is None:
             runtime_storage.close()
@@ -91,7 +92,9 @@ def create_app(settings: Settings | None = None, storage: Storage | None = None)
     app.mount("/assets", StaticFiles(directory=static_dir), name="assets")
 
     @app.middleware("http")
-    async def operational_headers(request: Request, call_next):
+    async def operational_headers(
+        request: Request, call_next: Callable[[Request], Awaitable[Response]]
+    ) -> Response:
         request_id = request.headers.get("x-request-id", uuid4().hex)
         response = await call_next(request)
         response.headers["x-request-id"] = request_id

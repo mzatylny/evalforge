@@ -1,4 +1,4 @@
-.PHONY: install test lint security run demo check
+.PHONY: install test lint typecheck security run demo check
 
 install:
 	python -m pip install -e ".[dev]"
@@ -10,6 +10,9 @@ lint:
 	ruff check .
 	ruff format --check .
 
+typecheck:
+	mypy src/evalforge
+
 security:
 	bandit -c pyproject.toml -r src
 
@@ -19,4 +22,4 @@ run:
 demo:
 	evalforge demo
 
-check: lint test security
+check: lint typecheck test security
